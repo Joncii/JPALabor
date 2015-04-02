@@ -50,7 +50,6 @@ public class Program {
 
 
     public void startControl() {
-//	    InputStream input = System.in;
         BufferedReader instream = new BufferedReader(new InputStreamReader(System.in));
         while (true) {
             try {
@@ -114,11 +113,17 @@ public class Program {
 
     // Uj tipus felvetele
     public void ujTipus(String azonosito, String fajta) throws Exception {
-        //TODO
-        //Hozza létre az új "Tipus" entitást és rögzítse adatbázisban az "ujEntity" metódussal.
-    	
-    	Tipus ujTipus = new Tipus(azonosito, fajta);
-    	ujEntity(ujTipus);
+    	Query q = em.createQuery("SELECT t FROM Tipus t WHERE t.azonosito=:pazonosito");
+    	q.setParameter("pazonosito", azonosito);
+    	try {
+    		Object o = q.getSingleResult();
+    		throw new Exception("Ilyen tipus mar van!");
+    	}
+    	//Hozza létre az új "Vonatszám" entitást és rögzítse adatbázisban az "ujEntity" metódussal.
+    	catch (NoResultException e) {
+        	Tipus t = new Tipus(azonosito,fajta);
+        	this.ujEntity(t);
+    	}
     }
 
     // Uj mozdony felvetele
@@ -220,7 +225,8 @@ public class Program {
     	
     	try {
 			
-    		_datum = buildDateFromString(datum);
+//    		_datum = buildDateFromString(datum);
+        	_datum = new SimpleDateFormat("yyyy.MM.dd", Locale.ENGLISH).parse(datum);    		
     		
 		} catch (Exception e) {
 			
@@ -319,9 +325,32 @@ public class Program {
     	//Készítsen lekérdezést, amely visszaadja az összes vonatot, majd
         //irassa ki a listazEntity metódussal az eredményt.
     	
-    	List<Vonat> resultList = em.createQuery("SELECT v FROM Vonat v").getResultList();
-    	
-    	listazEntity(resultList);
+    	List<String> list = new ArrayList<String>();
+    	Query q = em.createQuery("SELECT v FROM Vonat v");
+    	List<Vonat> vList = (List<Vonat>)(q.getResultList());
+    	Iterator<Vonat> i = vList.iterator();
+    	while(i.hasNext()) {
+    		Vonat v = i.next();
+    		int keses = v.getKeses(); //Kiírni  5.
+    		Date date=v.getDatum();   //Kiírni  2.
+    		Mozdony m=v.getMozdony();  
+    		Vonatszam vsz=v.getVonatszam();
+    		int vsz_id=vsz.getSzam();  //Kiírni 1.
+    		int m_id=m.getId();    //Kiírni 3.
+    		int m_fk=m.getFutottkm();  //Kiírni 4.
+    		
+    		String s_m_id=Integer.toString(m_id);
+    		String s_vsz_id=Integer.toString(vsz_id);
+    		String s_keses=Integer.toString(keses);
+    		SimpleDateFormat formatter=new SimpleDateFormat("yyyy.MM.dd");
+    		String s_date=formatter.format(date);
+    		String s_m_fk=Integer.toString(m_fk);
+    		    		
+    		String element=s_vsz_id+" "+s_date+" "+s_m_id+" "+s_m_fk+" "+s_keses;
+    		list.add(element);
+    	}
+        //irassa ki a listazEntity metódussal az eredményt.
+        listazEntity(list);
     }
 
     //Egyedi lekerdezes
@@ -331,6 +360,28 @@ public class Program {
         //egyes mozdony-fajták az adott napon összesen hány kilométert futottak.    	
         //Alakítsa át a megfelelõ típusokra a kapott String paramétereket. Tipp: használja a SimpleDateFormat-ot
         //Tipp: Nézzen utána a "többszörös SELECT" kezelésének
+    	
+    	Date date = new SimpleDateFormat("yyyy.MM.dd", Locale.ENGLISH).parse(datum);
+    	Query myquery=em.createQuery("SELECT t.fajta, SUM(vsz.uthossz) FROM Tipus t, Mozdony m, Vonat v, Vonatszam vsz WHERE "
+    			+ "v.datum = :pdate AND v.vonatszam = vsz AND v.mozdony = m AND m.tipus = t "
+    			+ "GROUP BY t.fajta");
+    	myquery.setParameter("pdate", date);
+    	
+    	List<Object[]> my_result=myquery.getResultList();
+    	List<String> list = new ArrayList<String>();  //this gonna be the result list
+    	
+    	Iterator<Object[]> i = my_result.iterator();
+    	
+    	while(i.hasNext()){
+    		Object[] my_object_array = i.next();
+    		String fajta_nev=(String)my_object_array[0];
+    		Long km=(Long)my_object_array[1];
+    		String s_km=Long.toString(km);
+    		String element=fajta_nev+" "+s_km;
+    		list.add(element);
+    	}	
+    	
+    	listazEntity(list);	    	
     }
     
     private Date buildDateFromString(String dateString) throws ParseException{

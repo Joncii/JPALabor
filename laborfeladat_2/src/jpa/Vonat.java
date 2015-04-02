@@ -1,5 +1,6 @@
 package jpa;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -19,13 +20,14 @@ public class Vonat {
 	@Temporal(TemporalType.DATE)
     private Date datum;
     private int keses;
-    @ManyToOne
+    @ManyToOne(cascade=CascadeType.PERSIST)
     private Vonatszam vonatszam;
-    @ManyToOne
+    @ManyToOne(cascade=CascadeType.PERSIST)
     private Mozdony mozdony;
 
 
 	@Id
+	@GeneratedValue(strategy = GenerationType.TABLE)
 	private int id;    
  
 	
@@ -52,6 +54,7 @@ public class Vonat {
         this.keses = keses;
     }
     
+    @ManyToOne
     public Mozdony getMozdony(){
     	
     	return mozdony;
